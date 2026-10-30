@@ -24,6 +24,7 @@ import {
   describeAnswers,
   experienceFromText,
   nextQuestion,
+  nextUpcomingDate,
   recommend,
   topicFromText,
   type Answers,
@@ -267,7 +268,7 @@ export function CourseAdvisor({ open, prefill, onClose }: { open: boolean; prefi
         ) : (
           <span />
         )}
-        <p className="text-right text-xs text-ink-subtle">We don&rsquo;t ask for personal details or store your answers.</p>
+        <p className="text-right text-xs text-ink-subtle">Your answers are only used to suggest a course. We don&rsquo;t ask for personal details or save your answers.</p>
       </div>
     </Dialog>
   );
@@ -390,6 +391,7 @@ function Results({ answers, catalogue, onClose }: { answers: Answers; catalogue:
 
 function RecommendationCard({ rec, reason, onClose, primary = false }: { rec: Recommendation; reason?: string; onClose: () => void; primary?: boolean }) {
   const c = rec.course;
+  const next = nextUpcomingDate(c);
   const onlinePrice = rec.format === "online" ? c.onlinePrice : null;
   const price = onlinePrice ?? c.fromPrice;
   const enquiry = `/contact?course=${encodeURIComponent(c.name)}`;
@@ -431,10 +433,10 @@ function RecommendationCard({ rec, reason, onClose, primary = false }: { rec: Re
             <dd>Exam included</dd>
           </div>
         )}
-        {c.nextDate && rec.format !== "online" && rec.format !== "onsite" && (
+        {next && rec.format !== "online" && rec.format !== "onsite" && (
           <div className="flex items-center gap-1.5">
             <dt><CalendarBlank aria-label="Next date" size={15} className="text-brand-600" /></dt>
-            <dd>Next {dateFmt.format(new Date(`${c.nextDate}T12:00:00Z`))}</dd>
+            <dd>Next {dateFmt.format(new Date(`${next}T12:00:00Z`))}</dd>
           </div>
         )}
         {primary && (

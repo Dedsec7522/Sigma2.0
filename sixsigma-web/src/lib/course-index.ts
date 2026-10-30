@@ -29,6 +29,7 @@ export function getCourseIndex(): CourseIndexEntry[] {
       audience: c.audience,
       prerequisites: c.prerequisites,
       nextDate: dates[0] ?? null,
+      upcomingDates: [...new Set(dates)].slice(0, 30),
       keywords: [c.name, c.meta.title, ...c.bullets].join(" ").toLowerCase(),
     };
   });

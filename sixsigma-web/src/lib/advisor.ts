@@ -249,6 +249,12 @@ export type Recommendation = {
   format: Format;
 };
 
+/** The soonest scheduled date that hasn't passed (the index is built ahead of time). */
+export function nextUpcomingDate(c: Pick<CourseIndexEntry, "upcomingDates" | "nextDate">): string | null {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+  return (c.upcomingDates ?? (c.nextDate ? [c.nextDate] : [])).find((d) => d >= today) ?? null;
+}
+
 const daysUntil = (iso: string) => (new Date(`${iso}T12:00:00Z`).getTime() - Date.now()) / 86_400_000;
 
 export function recommend(a: Answers, catalogue: CourseIndexEntry[]): { primary: Recommendation | null; alternatives: Recommendation[]; candidates: Recommendation[] } {
@@ -301,9 +307,10 @@ export function recommend(a: Answers, catalogue: CourseIndexEntry[]): { primary:
 
     if (a.timing && a.timing !== "flexible" && format !== "online" && format !== "onsite") {
       const horizon = a.timing === "soon" ? 31 : 92;
-      if (c.nextDate && daysUntil(c.nextDate) <= horizon) {
+      const next = nextUpcomingDate(c);
+      if (next && daysUntil(next) <= horizon) {
         score += 8;
-        reasons.push(`Scheduled dates within your timeframe, from ${shortDate(c.nextDate)}`);
+        reasons.push(`Scheduled dates within your timeframe, from ${shortDate(next)}`);
       } else score -= 6;
     }
 

@@ -7,8 +7,11 @@ Redesigned, statically generated front end for www.sixsigma.co.uk, built with Ne
 ```bash
 npm install
 npm run dev        # http://localhost:3000
+npm test           # unit tests (text cleanup, advisor, client IP, catalogue invariants, schema)
 npm run build && npm start
 ```
+
+CI (`.github/workflows/ci.yml`) runs lint, type check, unit tests and a production build on every push, then checks all 2,211 legacy URLs and the Course Advisor scenarios against that build.
 
 ## How it fits together
 
@@ -40,8 +43,8 @@ python -I ../tools/verify_urls.py http://localhost:3000
 
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Canonical origin, default `https://www.sixsigma.co.uk` |
-| `LEGACY_ORIGIN` | Origin of the existing booking/checkout platform |
+| `NEXT_PUBLIC_SITE_URL` | Canonical origin, default `https://www.sixsigma.co.uk`. Setting it marks the build as a real deployment, which then requires `LEGACY_ORIGIN` |
+| `LEGACY_ORIGIN` | Origin server of the existing booking/checkout platform. A deployment build fails if it is missing or points at the site's own public host (which would loop) |
 | `ENQUIRY_WEBHOOK_URL`, `ENQUIRY_WEBHOOK_TOKEN` | Where validated enquiries are POSTed as JSON (CRM, HubSpot or backend). Required in production; in development enquiries are written to `.data/enquiries.jsonl` |
 | `ANTHROPIC_API_KEY` | Optional. Enables AI re-ranking and plain-English explanations in the Course Advisor. Without it the advisor uses its deterministic engine only |
 | `ADVISOR_MODEL` | Optional model override for the advisor (default `claude-opus-5-5`) |

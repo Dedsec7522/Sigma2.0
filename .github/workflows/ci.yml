@@ -1,0 +1,49 @@
+# Checks every push and pull request: lint, types, unit tests, a production build,
+# then all 2,211 legacy URLs and the Course Advisor scenarios against that build.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: sixsigma-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: sixsigma-web/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+      - name: Verify legacy URLs and Course Advisor
+        run: |
+          npx next start -p 3100 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3100/ >/dev/null && break; sleep 2; done
+          pip install --quiet requests
+          python -I ../tools/verify_urls.py http://localhost:3100
+          node ../tools/advisor-scenarios.ts http://localhost:3100

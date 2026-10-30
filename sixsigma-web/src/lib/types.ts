@@ -126,5 +126,7 @@ export type CourseIndexEntry = {
   audience: string | null;
   prerequisites: string | null;
   nextDate: string | null;
+  /** Upcoming scheduled start dates (YYYY-MM-DD) at build time, soonest first. */
+  upcomingDates: string[];
   keywords: string;
 };

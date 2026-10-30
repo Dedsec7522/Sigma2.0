@@ -12,10 +12,14 @@ const KEY = "ss-consent";
 const EVENT = "ss-consent-change";
 type Consent = "granted" | "denied" | null;
 
+// Choices are stored as "granted:<timestamp>" and re-asked after 12 months.
+const MAX_AGE_MS = 365 * 86_400_000;
+
 function read(): Consent {
   try {
-    const v = localStorage.getItem(KEY);
-    return v === "granted" || v === "denied" ? v : null;
+    const [choice, at] = (localStorage.getItem(KEY) ?? "").split(":");
+    if (choice !== "granted" && choice !== "denied") return null;
+    return at && Date.now() - Number(at) > MAX_AGE_MS ? null : choice;
   } catch {
     return null;
   }
@@ -23,7 +27,7 @@ function read(): Consent {
 
 function write(v: Consent) {
   try {
-    if (v) localStorage.setItem(KEY, v);
+    if (v) localStorage.setItem(KEY, `${v}:${Date.now()}`);
     else localStorage.removeItem(KEY);
   } catch {
     /* storage unavailable: the banner simply shows again next visit */
@@ -48,7 +52,7 @@ export function CookieConsent({ gtmId }: { gtmId?: string }) {
 
   return (
     <>
-      {gtmId && consent === "granted" && (
+      {gtmId && /^GTM-[A-Z0-9]+$/.test(gtmId) && consent === "granted" && (
         <Script id="gtm" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
         </Script>
@@ -84,9 +88,30 @@ export function CookieConsent({ gtmId }: { gtmId?: string }) {
   );
 }
 
+/** Deletes Google Analytics cookies on this host and its parent domains. */
+function clearAnalyticsCookies() {
+  const names = document.cookie.split(";").map((c) => c.split("=")[0].trim()).filter((n) => /^(_ga|_gid|_gat|_gcl)/.test(n));
+  const parts = location.hostname.split(".");
+  const domains = parts.map((_, i) => parts.slice(i).join(".")).filter((d) => d.includes("."));
+  for (const name of names) {
+    document.cookie = `${name}=; Max-Age=0; path=/`;
+    for (const d of domains) document.cookie = `${name}=; Max-Age=0; path=/; domain=.${d}`;
+  }
+}
+
+function changeSettings() {
+  const hadAnalytics = read() === "granted";
+  write(null);
+  // Analytics already running can't be unloaded, so clear its cookies and reload.
+  if (hadAnalytics) {
+    clearAnalyticsCookies();
+    location.reload();
+  }
+}
+
 export function CookieSettingsLink() {
   return (
-    <button type="button" className="hover:text-white" onClick={() => write(null)}>
+    <button type="button" className="hover:text-white" onClick={changeSettings}>
       Cookie settings
     </button>
   );

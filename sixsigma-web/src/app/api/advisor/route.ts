@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getCourseIndex } from "@/lib/course-index";
-import { describeAnswers, type Answers } from "@/lib/advisor";
+import { describeAnswers, nextUpcomingDate, type Answers } from "@/lib/advisor";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIp, GLOBAL_LIMITS } from "@/lib/client-ip";
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       deliveryMethods: c.methods,
       selfPacedOnlineAvailable: Boolean(c.onlinePath),
       examIncluded: c.examIncluded,
-      nextScheduledDate: c.nextDate,
+      nextScheduledDate: nextUpcomingDate(c),
       summary: c.summary,
       whoItIsFor: c.audience,
       prerequisites: c.prerequisites,

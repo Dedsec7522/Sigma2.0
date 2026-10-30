@@ -80,6 +80,8 @@ def check(u):
         for item in data if isinstance(data, list) else [data]:
             if item.get("@type") == "Organisation":
                 out["problems"].append("invalid schema type Organisation")
+    if re.search(r'<meta name="robots" content="[^"]*noindex', html):
+        out["problems"].append("page is marked noindex")
     if "�" in html or "â€" in html:
         out["problems"].append("encoding artefacts in HTML")
     return out
@@ -87,6 +89,9 @@ def check(u):
 
 def main():
     inv = json.load(open(INV, encoding="utf-8"))["urls"]
+    # An empty or truncated inventory would make this check pass vacuously.
+    if len(inv) < 2000:
+        sys.exit(f"inventory has only {len(inv)} URLs; re-run tools/scrape_site.py before verifying")
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(check, inv))
     failed = [r for r in results if r["problems"]]

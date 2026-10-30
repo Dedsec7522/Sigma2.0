@@ -14,6 +14,16 @@ const legacyRedirects = [
 // Transactional paths (booking, basket, checkout, CMS, downloads) are still served by the
 // legacy platform. Proxy them so every existing URL keeps working on the same domain.
 const LEGACY_ORIGIN = process.env.LEGACY_ORIGIN ?? "https://www.sixsigma.co.uk";
+
+// A real deployment (NEXT_PUBLIC_SITE_URL set) must proxy to the legacy platform's
+// own origin server. Pointing at the public hostname, which this app then serves,
+// would make /booking and /checkout proxy to themselves in a loop.
+if (process.env.STATIC_EXPORT !== "1" && process.env.NEXT_PUBLIC_SITE_URL) {
+  const siteHost = new URL(process.env.NEXT_PUBLIC_SITE_URL).host;
+  if (!process.env.LEGACY_ORIGIN || new URL(process.env.LEGACY_ORIGIN).host === siteHost) {
+    throw new Error(`LEGACY_ORIGIN must be set to the legacy booking platform's origin server (not ${siteHost}) for a production deployment.`);
+  }
+}
 const LEGACY_PATHS = [
   "/booking/:path*",
   "/cart/:path*",

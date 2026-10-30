@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { CaretDown, List, MagnifyingGlass, Phone, Sparkle, X } from "@phosphor-icons/react";
 import { buttonClass } from "@/components/ui/button";
@@ -35,7 +35,17 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const advisor = useAdvisor();
   const search = useSearch();
   const navRef = useRef<HTMLDivElement>(null);
+  const mobileToggle = useRef<HTMLButtonElement>(null);
+  // Move focus into the mobile menu when it mounts (stable, so it runs once per open).
+  const focusFirstItem = useCallback((el: HTMLElement | null) => el?.querySelector<HTMLElement>("a, button")?.focus(), []);
   const closeTimer = useRef<number | undefined>(undefined);
+  // Hovering opens a menu, so the click that usually follows must not close it again.
+  const openedByHover = useRef(false);
+  const toggleMenu = (key: MenuKey) => {
+    if (menu === key && openedByHover.current) openedByHover.current = false;
+    else setMenu(menu === key ? null : key);
+    openedByHover.current = false;
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -71,13 +81,28 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
+    if (!mobileOpen) return;
+    // Escape closes the menu and returns focus to its toggle; widening to the
+    // desktop layout (where the toggle is hidden) closes it and unlocks scrolling.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMobileOpen(false);
+      mobileToggle.current?.focus();
+    };
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const onBreakpoint = () => desktop.matches && setMobileOpen(false);
+    document.addEventListener("keydown", onKey);
+    desktop.addEventListener("change", onBreakpoint);
     return () => {
       document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKey);
+      desktop.removeEventListener("change", onBreakpoint);
     };
   }, [mobileOpen]);
 
   const hoverOpen = (key: MenuKey) => {
     window.clearTimeout(closeTimer.current);
+    if (menu !== key) openedByHover.current = true;
     setMenu(key);
   };
   const hoverClose = () => {
@@ -110,7 +135,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           <ul className="flex items-center gap-1">
             {/* The panel sits inside this <li> so Tab moves from the trigger straight into it. */}
             <li onMouseEnter={() => hoverOpen("courses")} onBlur={closeOnFocusLeave}>
-              <MenuTrigger label="Courses" open={menu === "courses"} active={isActive("/courses")} onToggle={() => setMenu(menu === "courses" ? null : "courses")} controls="mega-courses" />
+              <MenuTrigger label="Courses" open={menu === "courses"} active={isActive("/courses")} onToggle={() => toggleMenu("courses")} controls="mega-courses" />
               <AnimatePresence>
                 {menu === "courses" && (
                   <motion.div
@@ -179,11 +204,11 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               <NavLink href="/locations" active={isActive("/locations")}>Locations</NavLink>
             </li>
             <li className="relative" onMouseEnter={() => hoverOpen("learn")} onBlur={closeOnFocusLeave}>
-              <MenuTrigger label="Insights" open={menu === "learn"} active={isActive("/blog") || isActive("/resources")} onToggle={() => setMenu(menu === "learn" ? null : "learn")} controls="menu-learn" />
+              <MenuTrigger label="Insights" open={menu === "learn"} active={isActive("/blog") || isActive("/resources")} onToggle={() => toggleMenu("learn")} controls="menu-learn" />
               <SmallMenu id="menu-learn" open={menu === "learn"} items={LEARN} />
             </li>
             <li className="relative" onMouseEnter={() => hoverOpen("company")} onBlur={closeOnFocusLeave}>
-              <MenuTrigger label="About" open={menu === "company"} active={COMPANY.some((c) => isActive(c.path))} onToggle={() => setMenu(menu === "company" ? null : "company")} controls="menu-company" />
+              <MenuTrigger label="About" open={menu === "company"} active={COMPANY.some((c) => isActive(c.path))} onToggle={() => toggleMenu("company")} controls="menu-company" />
               <SmallMenu id="menu-company" open={menu === "company"} items={COMPANY} />
             </li>
             <li onMouseEnter={hoverClose}>
@@ -213,6 +238,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav"
+            ref={mobileToggle}
             onClick={() => setMobileOpen((o) => !o)}
           >
             {mobileOpen ? <X size={22} aria-hidden /> : <List size={22} aria-hidden />}
@@ -225,6 +251,8 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         {mobileOpen && (
           <motion.nav
             id="mobile-nav"
+            ref={focusFirstItem}
+            onClick={(e) => (e.target as Element).closest("a") && setMobileOpen(false)}
             aria-label="Mobile"
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}

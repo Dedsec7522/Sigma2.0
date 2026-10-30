@@ -34,9 +34,11 @@ export function HeroSearch() {
         name="q"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        onFocus={(e) => {
-          if (!q && window.matchMedia("(pointer: fine)").matches) {
-            e.currentTarget.blur();
+        // A mouse click on the empty field opens instant search. Keyboard focus never
+        // does (no unexpected context change), so keyboard users can type and submit.
+        onPointerDown={(e) => {
+          if (!q && e.pointerType === "mouse") {
+            e.preventDefault();
             search.open();
           }
         }}

@@ -17,7 +17,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   // Ctrl/Cmd + K opens search from anywhere.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      // Don't stack dialogs: ignore the shortcut while another one is open.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && !document.querySelector('[role="dialog"][aria-modal="true"]')) {
         e.preventDefault();
         open();
       }

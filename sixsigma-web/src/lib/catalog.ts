@@ -74,7 +74,12 @@ function faqAnswer(faqs: Faq[], pattern: RegExp) {
 
 function buildCourse(c: RawCourse, onlineSlugs: Set<string>): Course {
   const faqs = cleanFaqs(c.faqs);
-  const classroom = sessions(c.classroom);
+  // The live course page shows only its first 10 classroom dates; the rest are on
+  // the course's city pages, so merge those in (de-duplicated by booking link).
+  const ownClassroom = c.classroom ?? [];
+  const seen = new Set(ownClassroom.map((s) => s.bookingUrl));
+  const fullClassroom = [...ownClassroom, ...(cityPageSessions.get(c.path) ?? []).filter((s) => !seen.has(s.bookingUrl) && seen.add(s.bookingUrl))];
+  const classroom = sessions(fullClassroom);
   const virtual = sessions(c.virtual);
   const overviewText = stripTags(c.overviewHtml ?? "").replace(/^.*?Overview\s*/i, "");
   const durationText = cleanText(c.keyPoints?.duration).replace(/Days Days/, "Days") || null;
@@ -84,7 +89,7 @@ function buildCourse(c: RawCourse, onlineSlugs: Set<string>): Course {
   // The scraped `deliveryMethods` is a generic tab bar (identical on every course), so
   // derive the real options from the schedule. Any course can be delivered onsite.
   const offered: Record<DeliveryMethod, boolean> = {
-    classroom: Boolean(c.classroom?.length) || coursesWithLocalDates.has(c.path),
+    classroom: fullClassroom.length > 0,
     virtual: Boolean(c.virtual?.length),
     online: Boolean(onlineCourseSlug),
     onsite: true,
@@ -154,9 +159,13 @@ const onlineSlugs = new Set(online.map((o) => o.slug));
 
 // ---------------------------------------------------------------- courses
 // Courses whose city pages list classroom dates, even if the main course page lists none.
-const coursesWithLocalDates = new Set(
-  (rawCourseLocations as { path: string; classroom?: unknown[] }[]).filter((cl) => cl.classroom?.length).map((cl) => cl.path.split("/").slice(0, 4).join("/")),
-);
+// Classroom sessions listed on each course's city pages, keyed by course path.
+const cityPageSessions = new Map<string, RawSession[]>();
+for (const cl of rawCourseLocations as { path: string; status: number; redirectsTo?: string; classroom?: RawSession[] }[]) {
+  if (cl.status !== 200 || cl.redirectsTo || !cl.classroom?.length) continue;
+  const coursePath = cl.path.split("/").slice(0, 4).join("/");
+  cityPageSessions.set(coursePath, [...(cityPageSessions.get(coursePath) ?? []), ...cl.classroom.filter((s) => s.bookingUrl && s.date)]);
+}
 const courses: Course[] = (rawCourses as RawCourse[]).filter((c) => c.status === 200).map((c) => buildCourse(c, onlineSlugs));
 const courseByPath = new Map(courses.map((c) => [c.path, c]));
 

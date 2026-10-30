@@ -1,10 +1,13 @@
 // Scenario checks for the Course Advisor engine against the built course index.
 // Run with:  node tools/advisor-scenarios.ts http://localhost:3100
+import { readFileSync } from "node:fs";
 import { recommend, topicFromText, type Answers } from "../sixsigma-web/src/lib/advisor.ts";
 
 const base = process.argv[2] ?? "http://localhost:3100";
 const index = await (await fetch(`${base}/course-index.json`)).json();
-const paths = new Set(index.map((c: { path: string }) => c.path));
+// The source of truth is the scraped catalogue, not the index under test.
+const catalogue = JSON.parse(readFileSync(new URL("../sixsigma-web/src/data/courses.json", import.meta.url), "utf8")) as { path: string; status: number; redirectsTo?: string }[];
+const paths = new Set(catalogue.filter((c) => c.status === 200 && !c.redirectsTo).map((c) => c.path));
 
 type Case = { name: string; answers: Answers; expect: RegExp | null };
 const cases: Case[] = [
@@ -33,4 +36,5 @@ console.log(`${text.topic === "agile" ? "PASS" : "FAIL"}  Free text "scrum maste
 if (text.topic !== "agile") failed++;
 const all = index.every((c: { path: string }) => paths.has(c.path));
 console.log(`${all ? "PASS" : "FAIL"}  every index entry is a real catalogue path (${index.length} courses)`);
+if (!all) failed++;
 process.exit(failed ? 1 : 0);

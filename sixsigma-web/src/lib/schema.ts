@@ -74,33 +74,36 @@ export function faqSchema(faqs: Faq[]) {
 
 const isoDuration = (days: number | null) => (days ? `P${days}D` : undefined);
 
+// Prices only appear in structured data when they are shown on the page.
+const offer = (price: number | null | undefined, url: string) =>
+  SITE.showPrices && price ? { offers: { "@type": "Offer", price, priceCurrency: "GBP", category: "Paid", availability: "https://schema.org/InStock", url } } : {};
+
+// courseWorkload must be an ISO 8601 duration; durations are published in whole days.
+const workload = (days: number | null) => (days ? { courseWorkload: isoDuration(days) } : {});
+
 function instance(s: Session, course: Course) {
   const virtual = s.method === "virtual";
   return {
     "@type": "CourseInstance",
     courseMode: virtual ? "Online" : "Onsite",
     startDate: s.date,
-    ...(course.durationDays ? { courseSchedule: { "@type": "Schedule", duration: isoDuration(course.durationDays), repeatCount: course.durationDays, repeatFrequency: "Daily" } } : {}),
+    ...workload(course.durationDays),
     location: virtual
       ? { "@type": "VirtualLocation", url: absoluteUrl(course.path) }
       : { "@type": "Place", name: s.location, address: { "@type": "PostalAddress", addressLocality: s.location, addressCountry: "GB" } },
-    ...(s.price
-      ? { offers: { "@type": "Offer", price: s.price, priceCurrency: "GBP", category: "Paid", availability: "https://schema.org/InStock", url: absoluteUrl(course.path) } }
-      : {}),
+    ...offer(s.price, absoluteUrl(course.path)),
   };
 }
 
 export function courseSchema(course: Course, opts: { path?: string; sessions?: Session[]; online?: OnlineCourse | null } = {}) {
   const sessions = (opts.sessions ?? [...course.classroom, ...course.virtual]).slice(0, 12);
-  const instances = sessions.map((s) => instance(s, course));
-  if (opts.online?.price) {
-    instances.push({
-      "@type": "CourseInstance",
-      courseMode: "Online",
-      courseWorkload: "Self-paced",
-      offers: { "@type": "Offer", price: opts.online.price, priceCurrency: "GBP", category: "Paid", url: absoluteUrl(opts.online.path) },
-    } as unknown as ReturnType<typeof instance>);
+  const instances: object[] = sessions.map((s) => instance(s, course));
+  if (opts.online) {
+    instances.push({ "@type": "CourseInstance", courseMode: "Online", ...workload(course.durationDays), ...offer(opts.online.price, absoluteUrl(opts.online.path)) });
   }
+  // Every course can be delivered onsite for teams; this keeps a valid instance when
+  // no public dates are scheduled. No price is published for it, so none is given.
+  instances.push({ "@type": "CourseInstance", courseMode: "Onsite", ...workload(course.durationDays), location: { "@type": "Place", name: "Your organisation's premises (onsite training)" } });
   return {
     "@context": "https://schema.org",
     "@type": "Course",
@@ -108,7 +111,7 @@ export function courseSchema(course: Course, opts: { path?: string; sessions?: S
     name: course.name,
     description: course.meta.description || course.summary,
     url: absoluteUrl(opts.path ?? course.path),
-    provider: { "@id": ORG_ID, "@type": "EducationalOrganization", name: SITE.brand, sameAs: SITE.url },
+    provider: { "@id": ORG_ID, "@type": "EducationalOrganization", name: SITE.brand, url: SITE.url },
     inLanguage: "en-GB",
     educationalLevel: course.level.charAt(0).toUpperCase() + course.level.slice(1),
     ...(course.bullets.length ? { teaches: course.bullets } : {}),
@@ -118,10 +121,10 @@ export function courseSchema(course: Course, opts: { path?: string; sessions?: S
     ...(course.certificateIncluded
       ? { educationalCredentialAwarded: { "@type": "EducationalOccupationalCredential", name: `${course.name} certificate`, credentialCategory: "Certificate" } }
       : {}),
-    ...(course.fromPrice
-      ? { offers: { "@type": "AggregateOffer", lowPrice: course.fromPrice, priceCurrency: "GBP", offerCount: sessions.length || 1, category: "Paid" } }
+    ...(SITE.showPrices && course.fromPrice
+      ? { offers: { "@type": "Offer", price: course.fromPrice, priceCurrency: "GBP", category: "Paid", url: absoluteUrl(opts.path ?? course.path) } }
       : {}),
-    ...(instances.length ? { hasCourseInstance: instances } : {}),
+    hasCourseInstance: instances,
   };
 }
 
@@ -133,17 +136,11 @@ export function onlineCourseSchema(o: OnlineCourse) {
     name: `${o.name} (self-paced online)`,
     description: o.meta.description || o.intro,
     url: absoluteUrl(o.path),
-    provider: { "@id": ORG_ID, "@type": "EducationalOrganization", name: SITE.brand, sameAs: SITE.url },
+    provider: { "@id": ORG_ID, "@type": "EducationalOrganization", name: SITE.brand, url: SITE.url },
     inLanguage: "en-GB",
-    hasCourseInstance: [
-      {
-        "@type": "CourseInstance",
-        courseMode: "Online",
-        courseWorkload: o.access ? `Access: ${o.access}` : "Self-paced",
-        ...(o.price ? { offers: { "@type": "Offer", price: o.price, priceCurrency: "GBP", category: "Paid", url: absoluteUrl(o.path) } } : {}),
-      },
-    ],
-    ...(o.price ? { offers: { "@type": "Offer", price: o.price, priceCurrency: "GBP", category: "Paid" } } : {}),
+    // Self-paced: no fixed workload is published, so courseWorkload is omitted rather than guessed.
+    hasCourseInstance: [{ "@type": "CourseInstance", courseMode: "Online", ...offer(o.price, absoluteUrl(o.path)) }],
+    ...offer(o.price, absoluteUrl(o.path)),
   };
 }
 

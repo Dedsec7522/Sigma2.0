@@ -15,6 +15,24 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: "Too many enquiries. Please call us instead." }, { status: 429 });
   }
 
+  // Only accept JSON posted from this site's own pages: stops other websites (or
+  // plain cross-site forms) submitting enquiries and consent in someone's name.
+  if (!req.headers.get("content-type")?.includes("application/json")) {
+    return Response.json({ ok: false, error: "Unsupported request" }, { status: 415 });
+  }
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const originHost = (() => {
+    try {
+      return origin ? new URL(origin).host : null;
+    } catch {
+      return "invalid"; // e.g. "Origin: null" from sandboxed frames
+    }
+  })();
+  if (originHost && host && originHost !== host) {
+    return Response.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();

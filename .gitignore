@@ -1,0 +1,10 @@
+# Scraper page cache (regenerate with: python -I tools/scrape_site.py --refresh)
+tools/.cache/
+
+# Local reports and logs
+tools/lighthouse/
+tools/*.log
+create.log
+
+# Local editor/agent tooling
+.claude/

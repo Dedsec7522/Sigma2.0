@@ -1,0 +1,255 @@
+@import "tailwindcss";
+
+/*
+ * Six Sigma design tokens.
+ * Deep navy carries the brand; the heritage green and yellow are kept but
+ * restrained: green for highlights and confirmations, gold for the single
+ * primary call to action. All text pairs below meet WCAG 2.2 AA (4.5:1).
+ */
+@theme {
+  --color-navy-950: #071226;
+  --color-navy-900: #0b1d3a;
+  --color-navy-800: #12294f;
+  --color-navy-700: #1c3a6b;
+  --color-navy-600: #2a4f8a;
+  --color-navy-100: #e3e9f3;
+  --color-navy-50: #f1f4f9;
+
+  --color-brand-700: #075e37;
+  --color-brand-600: #0a7a47;
+  --color-brand-500: #12945a;
+  --color-brand-100: #dcf2e6;
+  --color-brand-50: #eef9f3;
+
+  --color-gold-500: #f2c230;
+  --color-gold-400: #f6d35e;
+  --color-gold-100: #fdf3d0;
+
+  --color-ink: #0f172a;
+  --color-ink-muted: #475569;
+  --color-ink-subtle: #64748b;
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-danger: #b42318;
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.04), 0 18px 40px -12px rgb(11 29 58 / 0.22);
+  --shadow-pop: 0 24px 64px -16px rgb(7 18 38 / 0.35);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  color-scheme: light;
+  --header-h: 72px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-h) + 16px);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  color: var(--color-navy-900);
+  letter-spacing: -0.015em;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-navy-600);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.on-dark :focus-visible {
+  outline-color: var(--color-gold-400);
+}
+
+::selection {
+  background: var(--color-gold-100);
+  color: var(--color-navy-950);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-brand-600);
+  }
+
+  /* Long-form content migrated from the legacy CMS. */
+  .prose-content {
+    color: var(--color-ink);
+    max-width: 72ch;
+  }
+  .prose-content > * + * {
+    margin-top: 1em;
+  }
+  .prose-content h2 {
+    font-size: 1.5rem;
+    margin-top: 2em;
+  }
+  .prose-content h3 {
+    font-size: 1.25rem;
+    margin-top: 1.75em;
+  }
+  .prose-content h4 {
+    font-size: 1.0625rem;
+    margin-top: 1.5em;
+  }
+  .prose-content a {
+    color: var(--color-brand-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .prose-content a:hover {
+    color: var(--color-navy-900);
+  }
+  .prose-content ul,
+  .prose-content ol {
+    padding-left: 1.25rem;
+  }
+  .prose-content ul {
+    list-style: disc;
+  }
+  .prose-content ol {
+    list-style: decimal;
+  }
+  .prose-content li + li {
+    margin-top: 0.35em;
+  }
+  .prose-content li::marker {
+    color: var(--color-brand-600);
+  }
+  .prose-content ul.sub {
+    margin-top: 0.35em;
+    list-style: circle;
+    color: var(--color-ink-muted);
+  }
+  .prose-content img {
+    border-radius: 12px;
+    max-width: 100%;
+    height: auto;
+  }
+  .prose-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    display: block;
+    overflow-x: auto;
+  }
+  .prose-content th,
+  .prose-content td {
+    border: 1px solid var(--color-line);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose-content th {
+    background: var(--color-navy-50);
+  }
+  .prose-content blockquote {
+    border-left: 3px solid var(--color-brand-500);
+    padding-left: 1rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* Syllabus: modules render as headings followed by their topic lists. */
+  .syllabus h3 {
+    font-size: 1.0625rem;
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-line);
+  }
+  .syllabus h3:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-navy-50) 25%, #e9eef6 50%, var(--color-navy-50) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: 10px;
+  }
+}
+
+/* Above-the-fold entrance: pure CSS so it paints before hydration (good for LCP). */
+.rise {
+  animation: rise 0.7s var(--ease-out-soft) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

@@ -1,0 +1,10 @@
+{
+ "summary": {
+  "base": "http://localhost:3100",
+  "checked": 2211,
+  "pages_ok": 2047,
+  "redirects_ok": 164,
+  "failed": 0
+ },
+ "failures": []
+}

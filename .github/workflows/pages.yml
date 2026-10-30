@@ -44,6 +44,7 @@ jobs:
           # Route handlers that need a server cannot be part of a static export.
           rm -rf src/app/api
           npx next build
+          node scripts/preview-redirects.mjs
           touch out/.nojekyll
         env:
           STATIC_EXPORT: "1"

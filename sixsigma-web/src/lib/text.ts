@@ -44,7 +44,7 @@ export function cleanHtml(s: string | null | undefined): string {
   return repairReplacementChars(repairMojibake(s))
     .replace(/ /g, " ")
     .replace(/https?:\/\/(www\.)?sixsigma\.co\.uk(?=\/)/g, "")
-    .replace(/(href|src)="\/(uploads|booking)\//g, (_, attr: string, dir: string) => `${attr}="${legacyUrl(`/${dir}/`)}`)
+    .replace(/(href|src)="\/(uploads|booking|cms)\//g, (_, attr: string, dir: string) => `${attr}="${legacyUrl(`/${dir}/`)}`)
     .replace(/(href|src)="\/(?!\/)/g, `$1="${BASE_PATH}/`)
     .trim();
 }

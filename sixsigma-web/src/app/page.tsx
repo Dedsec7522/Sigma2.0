@@ -11,6 +11,7 @@ import { CourseCard, LevelBadge } from "@/components/CourseCard";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { BeltPathway } from "@/components/home/BeltPathway";
 import { HeroSearch } from "@/components/search/HeroSearch";
+import { FutureOnly } from "@/components/FutureOnly";
 import { AdvisorButton } from "@/components/advisor/AdvisorButton";
 import { getCategories, getCategoryCourses, getCourseByPath, getCourses, getFeaturedCourses, getLocations, getUpcomingSessions, popularLocationSlugs } from "@/lib/catalog";
 import { getPosts, pageMeta } from "@/lib/content";
@@ -278,7 +279,8 @@ export default function HomePage() {
           <Reveal className="mt-10 overflow-hidden rounded-2xl border border-line">
             <ul className="divide-y divide-line bg-white">
               {upcoming.map((s) => (
-                <li key={`${s.course.path}-${s.date}-${s.location}`} className="grid items-center gap-3 px-5 py-4 sm:grid-cols-[9rem_1fr_auto] sm:gap-6">
+                <FutureOnly key={`${s.course.path}-${s.date}-${s.location}`} date={s.date}>
+                <li className="grid items-center gap-3 px-5 py-4 sm:grid-cols-[9rem_1fr_auto] sm:gap-6">
                   <p className="flex items-center gap-2 font-semibold tabular-nums text-navy-900">
                     <CalendarBlank aria-hidden size={18} className="text-brand-600" />
                     {formatDate(s.date, { weekday: "short", day: "numeric", month: "short" })}
@@ -300,6 +302,7 @@ export default function HomePage() {
                     )}
                   </div>
                 </li>
+                </FutureOnly>
               ))}
             </ul>
           </Reveal>

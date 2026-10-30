@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getCourseIndex } from "@/lib/course-index";
 import { describeAnswers, type Answers } from "@/lib/advisor";
 import { rateLimit } from "@/lib/rate-limit";
+import { clientIp, GLOBAL_LIMITS } from "@/lib/client-ip";
 
 const MODEL = process.env.ADVISOR_MODEL ?? "claude-opus-5-5";
 
@@ -23,8 +24,8 @@ export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
     return Response.json({ error: "AI refinement is not configured" }, { status: 501 });
   }
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  if (!rateLimit(`advisor:${ip}`, 12, 60_000)) {
+  // Per-visitor limit plus a site-wide cap that bounds paid model usage even if IPs are spoofed.
+  if (!rateLimit(`advisor:${clientIp(req)}`, 12, 60_000) || !rateLimit("advisor:all", GLOBAL_LIMITS.advisorPerHour, 3_600_000)) {
     return Response.json({ error: "Too many requests" }, { status: 429 });
   }
 

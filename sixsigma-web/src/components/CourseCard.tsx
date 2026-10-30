@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarBlank, Certificate, Clock } from "@phosphor-icons/react/dist/ssr";
 import { formatDate, formatPrice, SITE } from "@/lib/site";
 import { LEVEL_LABEL, type Course, type Level } from "@/lib/types";
+import { FutureOnly } from "./FutureOnly";
 
 export type CardData = { path: string; name: string; level: Level; summary: string; duration: string | null; examIncluded: boolean; fromPrice: number | null; nextDate: string | null };
 
@@ -61,10 +62,12 @@ export function CourseCard({ course: input, categoryName, headingLevel = "h3" }:
           </li>
         )}
         {course.nextDate && (
-          <li className="flex items-center gap-1.5">
-            <CalendarBlank aria-hidden size={16} className="text-brand-600" />
-            Next: {formatDate(course.nextDate, { day: "numeric", month: "short" })}
-          </li>
+          <FutureOnly date={course.nextDate}>
+            <li className="flex items-center gap-1.5">
+              <CalendarBlank aria-hidden size={16} className="text-brand-600" />
+              Next: {formatDate(course.nextDate, { day: "numeric", month: "short" })}
+            </li>
+          </FutureOnly>
         )}
       </ul>
       <div className="mt-auto flex items-end justify-between gap-4 border-t border-line pt-5">
@@ -73,7 +76,7 @@ export function CourseCard({ course: input, categoryName, headingLevel = "h3" }:
             From <span className="font-display text-lg font-semibold tabular-nums text-navy-900">{formatPrice(course.fromPrice)}</span>
           </p>
         ) : (
-          <p className="text-sm text-ink-muted">Classroom, virtual and onsite</p>
+          <p className="text-sm text-ink-muted">Enquire for dates and prices</p>
         )}
         <span aria-hidden className="flex items-center gap-1 text-sm font-semibold text-navy-900">
           View course

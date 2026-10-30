@@ -14,6 +14,7 @@ import { SITE } from "@/lib/site";
 export type NavCategory = { name: string; path: string; courses: { name: string; path: string }[] };
 
 type MenuKey = "courses" | "company" | "learn";
+const MENU_IDS: Record<MenuKey, string> = { courses: "mega-courses", learn: "menu-learn", company: "menu-company" };
 
 const COMPANY = [
   { name: "About us", path: "/about-us", blurb: "Six Sigma specialists since 1998" },
@@ -53,7 +54,12 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
   useEffect(() => {
     if (!menu) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Return focus to the trigger so keyboard users keep their place.
+      navRef.current?.querySelector<HTMLElement>(`[aria-controls="${MENU_IDS[menu]}"]`)?.focus();
+      setMenu(null);
+    };
     const onClick = (e: MouseEvent) => !navRef.current?.contains(e.target as Node) && setMenu(null);
     document.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onClick);
@@ -77,6 +83,12 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const hoverClose = () => {
     closeTimer.current = window.setTimeout(() => setMenu(null), 140);
   };
+  // Close when keyboard focus moves to something outside the open menu (not on
+  // clicks on blank areas inside it, where relatedTarget is null).
+  const closeOnFocusLeave = (e: React.FocusEvent<HTMLLIElement>) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && !e.currentTarget.contains(next)) setMenu(null);
+  };
 
   const isActive = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
 
@@ -96,8 +108,66 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
         <nav aria-label="Main" className="hidden flex-1 lg:block">
           <ul className="flex items-center gap-1">
-            <li onMouseEnter={() => hoverOpen("courses")}>
+            {/* The panel sits inside this <li> so Tab moves from the trigger straight into it. */}
+            <li onMouseEnter={() => hoverOpen("courses")} onBlur={closeOnFocusLeave}>
               <MenuTrigger label="Courses" open={menu === "courses"} active={isActive("/courses")} onToggle={() => setMenu(menu === "courses" ? null : "courses")} controls="mega-courses" />
+              <AnimatePresence>
+                {menu === "courses" && (
+                  <motion.div
+                    id="mega-courses"
+                    key="mega"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6, transition: { duration: 0.14 } }}
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    className="absolute inset-x-0 top-full hidden border-b border-line bg-white shadow-pop lg:block"
+                    onMouseEnter={() => hoverOpen("courses")}
+                  >
+                    <div className="container-page grid grid-cols-[1fr_18rem] gap-10 py-8">
+                      <div className="grid grid-cols-3 gap-x-8 gap-y-7">
+                        {categories.map((cat) => (
+                          <div key={cat.path}>
+                            <Link href={cat.path} className="font-display text-[0.95rem] font-semibold text-navy-900 hover:text-brand-700">
+                              {cat.name}
+                            </Link>
+                            <ul className="mt-2.5 space-y-1.5">
+                              {cat.courses.slice(0, 5).map((c) => (
+                                <li key={c.path}>
+                                  <Link href={c.path} className="text-sm text-ink-muted transition-colors hover:text-navy-900">
+                                    {c.name}
+                                  </Link>
+                                </li>
+                              ))}
+                              {cat.courses.length > 5 && (
+                                <li>
+                                  <Link href={cat.path} className="text-sm font-semibold text-brand-700 hover:text-navy-900">
+                                    All {cat.courses.length} courses
+                                  </Link>
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="on-dark flex flex-col justify-between rounded-2xl bg-navy-900 p-6 text-white">
+                        <div>
+                          <Sparkle aria-hidden size={26} weight="fill" className="text-gold-400" />
+                          <p className="mt-4 font-display text-lg font-semibold">Not sure where to start?</p>
+                          <p className="mt-2 text-sm leading-relaxed text-white/75">Answer a few quick questions and our Course Advisor will match you to the right course.</p>
+                        </div>
+                        <div className="mt-6 flex flex-col gap-2">
+                          <button type="button" onClick={() => { setMenu(null); advisor.open(); }} className={buttonClass("gold", "sm")}>
+                            Find my course
+                          </button>
+                          <Link href="/courses" className="text-center text-sm font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline">
+                            Browse all courses
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </li>
             <li onMouseEnter={hoverClose}>
               <NavLink href="/online-training/six-sigma" active={isActive("/online-training") || isActive("/online-course")}>Online training</NavLink>
@@ -108,11 +178,11 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             <li onMouseEnter={hoverClose}>
               <NavLink href="/locations" active={isActive("/locations")}>Locations</NavLink>
             </li>
-            <li className="relative" onMouseEnter={() => hoverOpen("learn")}>
+            <li className="relative" onMouseEnter={() => hoverOpen("learn")} onBlur={closeOnFocusLeave}>
               <MenuTrigger label="Insights" open={menu === "learn"} active={isActive("/blog") || isActive("/resources")} onToggle={() => setMenu(menu === "learn" ? null : "learn")} controls="menu-learn" />
               <SmallMenu id="menu-learn" open={menu === "learn"} items={LEARN} />
             </li>
-            <li className="relative" onMouseEnter={() => hoverOpen("company")}>
+            <li className="relative" onMouseEnter={() => hoverOpen("company")} onBlur={closeOnFocusLeave}>
               <MenuTrigger label="About" open={menu === "company"} active={COMPANY.some((c) => isActive(c.path))} onToggle={() => setMenu(menu === "company" ? null : "company")} controls="menu-company" />
               <SmallMenu id="menu-company" open={menu === "company"} items={COMPANY} />
             </li>
@@ -149,63 +219,6 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           </button>
         </div>
 
-        <AnimatePresence>
-          {menu === "courses" && (
-            <motion.div
-              id="mega-courses"
-              key="mega"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6, transition: { duration: 0.14 } }}
-              transition={{ type: "spring", stiffness: 420, damping: 34 }}
-              className="absolute inset-x-0 top-full hidden border-b border-line bg-white shadow-pop lg:block"
-              onMouseEnter={() => hoverOpen("courses")}
-            >
-              <div className="container-page grid grid-cols-[1fr_18rem] gap-10 py-8">
-                <div className="grid grid-cols-3 gap-x-8 gap-y-7">
-                  {categories.map((cat) => (
-                    <div key={cat.path}>
-                      <Link href={cat.path} className="font-display text-[0.95rem] font-semibold text-navy-900 hover:text-brand-700">
-                        {cat.name}
-                      </Link>
-                      <ul className="mt-2.5 space-y-1.5">
-                        {cat.courses.slice(0, 5).map((c) => (
-                          <li key={c.path}>
-                            <Link href={c.path} className="text-sm text-ink-muted transition-colors hover:text-navy-900">
-                              {c.name}
-                            </Link>
-                          </li>
-                        ))}
-                        {cat.courses.length > 5 && (
-                          <li>
-                            <Link href={cat.path} className="text-sm font-semibold text-brand-700 hover:text-navy-900">
-                              All {cat.courses.length} courses
-                            </Link>
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                <div className="on-dark flex flex-col justify-between rounded-2xl bg-navy-900 p-6 text-white">
-                  <div>
-                    <Sparkle aria-hidden size={26} weight="fill" className="text-gold-400" />
-                    <p className="mt-4 font-display text-lg font-semibold">Not sure where to start?</p>
-                    <p className="mt-2 text-sm leading-relaxed text-white/75">Answer a few quick questions and our Course Advisor will match you to the right course.</p>
-                  </div>
-                  <div className="mt-6 flex flex-col gap-2">
-                    <button type="button" onClick={() => { setMenu(null); advisor.open(); }} className={buttonClass("gold", "sm")}>
-                      Find my course
-                    </button>
-                    <Link href="/courses" className="text-center text-sm font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline">
-                      Browse all courses
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       <AnimatePresence>

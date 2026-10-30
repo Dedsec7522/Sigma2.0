@@ -1,5 +1,6 @@
 // Minimal fixed-window limiter for API routes. Per server instance; put a shared
-// store (e.g. Redis) behind this if the site runs on several instances.
+// store (e.g. Redis) behind this if the site runs on several instances. Keys come
+// from lib/client-ip.ts, which avoids the client-controlled X-Forwarded-For entry.
 const hits = new Map<string, { count: number; reset: number }>();
 
 export function rateLimit(key: string, limit: number, windowMs: number) {

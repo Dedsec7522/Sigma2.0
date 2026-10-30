@@ -4,6 +4,7 @@ import rawCourses from "@/data/courses.json";
 import rawLocations from "@/data/locations.json";
 import rawOnline from "@/data/online.json";
 import rawCourseLocations from "@/data/course-locations.json";
+import inventory from "@/data/url-inventory.json";
 import { cleanHtml, cleanText, firstSentences, stripTags } from "./text";
 import { IS_STATIC_PREVIEW, legacyUrl } from "./site";
 import type { Category, Course, CourseLocation, DeliveryMethod, Faq, Level, Location, OnlineCourse, Session } from "./types";
@@ -79,8 +80,16 @@ function buildCourse(c: RawCourse, onlineSlugs: Set<string>): Course {
   const durationText = cleanText(c.keyPoints?.duration).replace(/Days Days/, "Days") || null;
   const allPrices = [...classroom, ...virtual].map((s) => s.price).filter((p): p is number => typeof p === "number" && p > 0);
   const name = cleanText(c.name);
-  const methods = METHOD_ORDER.filter((m) => (c.deliveryMethods ?? []).includes(m));
   const onlineCourseSlug = c.onlineCourseSlug && onlineSlugs.has(c.onlineCourseSlug) ? c.onlineCourseSlug : null;
+  // The scraped `deliveryMethods` is a generic tab bar (identical on every course), so
+  // derive the real options from the schedule. Any course can be delivered onsite.
+  const offered: Record<DeliveryMethod, boolean> = {
+    classroom: Boolean(c.classroom?.length) || coursesWithLocalDates.has(c.path),
+    virtual: Boolean(c.virtual?.length),
+    online: Boolean(onlineCourseSlug),
+    onsite: true,
+  };
+  const methods = METHOD_ORDER.filter((m) => offered[m]);
   return {
     slug: c.slug,
     category: c.category,
@@ -144,8 +153,19 @@ const online: OnlineCourse[] = (rawOnline.courses as RawOnline[])
 const onlineSlugs = new Set(online.map((o) => o.slug));
 
 // ---------------------------------------------------------------- courses
+// Courses whose city pages list classroom dates, even if the main course page lists none.
+const coursesWithLocalDates = new Set(
+  (rawCourseLocations as { path: string; classroom?: unknown[] }[]).filter((cl) => cl.classroom?.length).map((cl) => cl.path.split("/").slice(0, 4).join("/")),
+);
 const courses: Course[] = (rawCourses as RawCourse[]).filter((c) => c.status === 200).map((c) => buildCourse(c, onlineSlugs));
 const courseByPath = new Map(courses.map((c) => [c.path, c]));
+
+// Dates and prices are baked in at build time; flag builds made from stale data.
+const scrapedOn = (inventory as { generated?: string }).generated;
+const dataAgeDays = scrapedOn ? (Date.now() - Date.parse(scrapedOn)) / 86_400_000 : Infinity;
+if (dataAgeDays > 7 || !courses.some((c) => c.classroom.length || c.virtual.length)) {
+  console.warn(`[catalog] Course data was scraped on ${scrapedOn ?? "an unknown date"} and may be stale. Run tools/scrape_site.py --refresh and rebuild.`);
+}
 
 type RawCategory = { slug: string; path: string; name: string; courseOrder: string[]; meta?: Meta; h1?: string; intro?: string; sections?: { heading: string; paragraphs: string[] }[] };
 

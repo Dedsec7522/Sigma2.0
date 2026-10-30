@@ -47,7 +47,12 @@ export function Dialog({
       if (!items.length) return;
       const first = items[0];
       const last = items[items.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      // Focus can end up outside the panel (e.g. the focused element was removed);
+      // bring it back rather than letting Tab reach the page behind the modal.
+      if (!panel.current.contains(document.activeElement)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {

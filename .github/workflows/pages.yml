@@ -7,6 +7,9 @@ name: Deploy preview to GitHub Pages
 on:
   push:
     branches: [main]
+  # Daily rebuild with freshly scraped course dates and prices.
+  schedule:
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -21,11 +24,24 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: sixsigma-web
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Refresh dates, prices and content from the live site. The scraper aborts
+      # (failing this run and keeping the last deployment) if the scrape looks partial.
+      - name: Refresh course data
+        working-directory: .
+        run: |
+          pip install --quiet requests beautifulsoup4 lxml
+          python -I tools/scrape_site.py --refresh
 
       - uses: actions/setup-node@v4
         with:

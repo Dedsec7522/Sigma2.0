@@ -9,6 +9,7 @@ import { CourseCard, LevelBadge } from "@/components/CourseCard";
 import { AdvisorButton } from "@/components/advisor/AdvisorButton";
 import { EnquiryForm } from "@/components/forms/EnquiryForm";
 import { Expandable } from "./Expandable";
+import { FutureOnly } from "@/components/FutureOnly";
 import { ScheduleTable } from "./ScheduleTable";
 import { SectionNav } from "./SectionNav";
 import { getCategory, getCourseLocationsFor, getOnlineCourse, getRelatedCourses } from "@/lib/catalog";
@@ -72,13 +73,15 @@ export function CoursePage({ course, location }: { course: Course; location?: Co
                 From <span className="block font-display text-3xl font-semibold tabular-nums text-navy-900">{formatPrice(fromPrice)}</span>
               </p>
             ) : (
-              <p className="mt-4 font-display text-xl font-semibold text-navy-900">Classroom, virtual &amp; onsite</p>
+              <p className="mt-4 font-display text-xl font-semibold text-navy-900">{course.deliveryMethods.map((m) => METHOD_LABEL[m]).join(" · ")}</p>
             )}
             {next && (
+              <FutureOnly date={next.date}>
               <p className="mt-2 text-sm text-ink-muted">
                 Next date: <span className="font-semibold text-navy-900">{formatDate(next.date)}</span>
                 {next.method === "virtual" ? " (live online)" : ` in ${next.location}`}
               </p>
+              </FutureOnly>
             )}
             <div className="mt-5 grid gap-2">
               <a href="#dates" className={buttonClass("gold", "md")}>
@@ -100,7 +103,7 @@ export function CoursePage({ course, location }: { course: Course; location?: Co
         <dl className="container-page grid grid-cols-2 gap-x-6 gap-y-5 py-6 md:grid-cols-4">
           <Fact icon={Clock} term="Duration" value={course.duration ?? "Contact us"} />
           <Fact icon={Certificate} term="Certification" value={course.certificateIncluded ? "Exam & certificate included" : "Certificate of attendance"} />
-          <Fact icon={UsersThree} term="Delivery" value={`${course.deliveryMethods.length} ways to attend`} />
+          <Fact icon={UsersThree} term="Delivery" value={course.deliveryMethods.length === 1 ? METHOD_LABEL[course.deliveryMethods[0]] : `${course.deliveryMethods.length} ways to attend`} />
           <Fact icon={Headset} term="Support" value={course.support ? `${course.support} support` : "Full support"} />
         </dl>
       </section>

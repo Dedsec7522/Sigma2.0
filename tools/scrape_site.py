@@ -52,20 +52,25 @@ def fetch(path):
     if not REFRESH and os.path.exists(meta_f):
         with open(meta_f, encoding="utf-8") as f:
             return tuple(json.load(f))
-    for attempt in range(3):
+    r = None
+    for attempt in range(4):
         try:
             r = session.get(BASE + path, timeout=40)
-            break
+            if r.status_code < 500 and r.status_code != 429:
+                break
         except requests.RequestException:
-            time.sleep(2 * (attempt + 1))
-    else:
+            r = None
+        time.sleep(2 * (attempt + 1))
+    if r is None:
         return (path, 0, "")
     html = r.content.decode("utf-8", errors="cp1252fallback")
     u = urllib.parse.urlparse(r.url)
     final = (u.path or "/") + ("?" + u.query if u.query else "")
     res = (final, r.status_code, html)
-    with open(meta_f, "w", encoding="utf-8") as f:
-        json.dump(res, f)
+    # Never cache server errors or throttling: a later run should retry them.
+    if r.status_code < 500 and r.status_code != 429:
+        with open(meta_f, "w", encoding="utf-8") as f:
+            json.dump(res, f)
     time.sleep(0.15)
     return res
 
@@ -559,6 +564,7 @@ def scrape_static(path):
 # ---------------------------------------------------------------- inventory
 def sitemap_inventory():
     r = session.get(BASE + "/sitemap.xml", timeout=60)
+    r.raise_for_status()
     out = []
     for u in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", r.text):
         p = urllib.parse.urlparse(u).path or "/"
@@ -573,6 +579,11 @@ def check(path):
             "redirected": final.split("?")[0].rstrip("/") != path.rstrip("/")}
 
 
+def expect(condition, message):
+    if not condition:
+        sys.exit(f"scrape aborted, existing data left unchanged: {message}")
+
+
 def dump(name, obj):
     with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=1)
@@ -584,8 +595,15 @@ def main():
     inv = sitemap_inventory()
     cats, courses = scrape_catalogue()
     print(len(cats), "categories", len(courses), "courses", flush=True)
-    dump("categories.json", list(pool.map(scrape_category, cats)))
+    # The site is rebuilt from this output automatically, so refuse to overwrite
+    # good data with a partial scrape (site down, layout change, blocked request).
+    expect(len(inv) >= 2000, f"sitemap has only {len(inv)} URLs")
+    expect(len(cats) >= 5 and len(courses) >= 40, f"catalogue has only {len(cats)} categories / {len(courses)} courses")
     course_data = list(pool.map(scrape_course, courses))
+    ok_courses = [c for c in course_data if c.get("status") == 200 and not c.get("redirectsTo")]
+    expect(len(ok_courses) >= 40, f"only {len(ok_courses)} course pages scraped successfully")
+    expect(sum(1 for c in ok_courses if c.get("classroom") or c.get("virtual")) >= 20, "too few courses have scheduled dates")
+    dump("categories.json", list(pool.map(scrape_category, cats)))
     dump("courses.json", course_data)
 
     loc_index = scrape_locations_index()

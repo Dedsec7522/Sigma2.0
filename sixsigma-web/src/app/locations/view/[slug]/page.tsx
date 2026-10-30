@@ -6,6 +6,7 @@ import { PageHero } from "@/components/ui/PageHero";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { buttonClass } from "@/components/ui/button";
 import { EnquiryForm } from "@/components/forms/EnquiryForm";
+import { FutureOnly } from "@/components/FutureOnly";
 import { getCourseByPath, getCourseLocations, getCourses, getLocation, getLocations } from "@/lib/catalog";
 import { breadcrumbSchema } from "@/lib/schema";
 import { formatDate, formatPrice, SITE } from "@/lib/site";
@@ -62,7 +63,8 @@ export default async function LocationPage({ params }: PageProps<"/locations/vie
               </h2>
               <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
                 {dates.map((s) => (
-                  <li key={`${s.course.path}-${s.date}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                  <FutureOnly key={`${s.course.path}-${s.date}`} date={s.date}>
+                  <li className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
                     <div className="flex items-start gap-3">
                       <CalendarBlank aria-hidden size={20} className="mt-0.5 text-brand-600" />
                       <div>
@@ -83,6 +85,7 @@ export default async function LocationPage({ params }: PageProps<"/locations/vie
                       )}
                     </div>
                   </li>
+                  </FutureOnly>
                 ))}
               </ul>
             </section>

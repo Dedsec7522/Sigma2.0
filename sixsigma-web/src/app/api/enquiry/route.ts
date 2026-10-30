@@ -1,6 +1,7 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { rateLimit } from "@/lib/rate-limit";
+import { clientIp, GLOBAL_LIMITS } from "@/lib/client-ip";
 
 // Enquiries are validated here, then forwarded to the CRM/backend configured in
 // ENQUIRY_WEBHOOK_URL (JSON POST). Without one, development stores them locally.
@@ -9,8 +10,8 @@ const FIELDS = { name: 120, email: 160, phone: 40, company: 160, jobTitle: 120, 
 type Field = keyof typeof FIELDS;
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  if (!rateLimit(`enquiry:${ip}`, 6, 10 * 60_000)) {
+  // Per-visitor limit plus a site-wide cap so a spoofed-IP flood can't swamp the CRM.
+  if (!rateLimit(`enquiry:${clientIp(req)}`, 6, 10 * 60_000) || !rateLimit("enquiry:all", GLOBAL_LIMITS.enquiriesPerHour, 3_600_000)) {
     return Response.json({ ok: false, error: "Too many enquiries. Please call us instead." }, { status: 429 });
   }
 

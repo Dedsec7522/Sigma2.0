@@ -47,6 +47,8 @@ python -I ../tools/verify_urls.py http://localhost:3000
 | `ADVISOR_MODEL` | Optional model override for the advisor (default `claude-opus-5-5`) |
 | `NEXT_PUBLIC_GTM_ID` | Google Tag Manager container (the live site uses `GTM-WQPHP6G`). Loaded only after the visitor accepts analytics cookies |
 | `NEXT_PUBLIC_SHOW_PRICES` | Set to `false` to hide prices site-wide |
+| `TRUSTED_IP_HEADER` | Header your host sets with the real client IP (e.g. `x-vercel-forwarded-for`, `cf-connecting-ip`, `x-real-ip`). Used for per-visitor rate limits; without it the right-most `X-Forwarded-For` hop is used |
+| `ADVISOR_MAX_PER_HOUR`, `ENQUIRY_MAX_PER_HOUR` | Site-wide hourly caps on AI advisor calls (default 300) and enquiries (default 100), regardless of IP. Also set a monthly spend limit on the Anthropic key |
 
 ## Refreshing content
 

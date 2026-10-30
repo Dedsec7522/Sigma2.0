@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Buildings, CalendarBlank, Desktop, Laptop, MapPin } from "@phosphor-icons/react";
 import { buttonClass } from "@/components/ui/button";
 import type { Session } from "@/lib/types";
+import { isPast, useToday } from "@/lib/use-today";
 
 type Tab = "classroom" | "virtual" | "online" | "onsite";
 
@@ -14,8 +15,8 @@ const priceFmt = new Intl.NumberFormat("en-GB", { style: "currency", currency: "
 
 export function ScheduleTable({
   courseName,
-  classroom,
-  virtual,
+  classroom: allClassroom,
+  virtual: allVirtual,
   online,
   showPrices,
   initialLocation,
@@ -27,6 +28,11 @@ export function ScheduleTable({
   showPrices: boolean;
   initialLocation?: string;
 }) {
+  // Pages are pre-built; drop any session that has passed since the build.
+  const today = useToday();
+  const classroom = useMemo(() => allClassroom.filter((s) => !isPast(s.date, today)), [allClassroom, today]);
+  const virtual = useMemo(() => allVirtual.filter((s) => !isPast(s.date, today)), [allVirtual, today]);
+
   const tabs = useMemo(() => {
     const t: { key: Tab; label: string; icon: typeof Desktop; count?: number }[] = [];
     if (classroom.length) t.push({ key: "classroom", label: "Classroom", icon: MapPin, count: classroom.length });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowCounterClockwise,
@@ -49,12 +49,24 @@ export function CourseAdvisor({ open, prefill, onClose }: { open: boolean; prefi
   const answered = describeAnswers(answers).length;
   const done = Boolean(data && !question);
 
+  // The control that was used to move between steps unmounts with its step, so
+  // move focus to the new step's heading (only after the visitor acts, not on open).
+  const moveFocus = useRef(false);
+  const focusOnMount = useCallback((el: HTMLElement | null) => {
+    if (el && moveFocus.current) {
+      moveFocus.current = false;
+      el.focus();
+    }
+  }, []);
+
   const choose = (id: keyof Answers, value: string) => {
+    moveFocus.current = true;
     setDirection(1);
     setAnswers((a) => ({ ...a, [id]: value }));
   };
 
   const back = () => {
+    moveFocus.current = true;
     setDirection(-1);
     setAnswers((a) => {
       const keys = ANSWER_ORDER.filter((k) => a[k] !== undefined);
@@ -67,6 +79,7 @@ export function CourseAdvisor({ open, prefill, onClose }: { open: boolean; prefi
   };
 
   const editFrom = (key: keyof Answers) => {
+    moveFocus.current = true;
     setDirection(-1);
     setAnswers((a) => {
       const idx = ANSWER_ORDER.indexOf(key);
@@ -77,6 +90,7 @@ export function CourseAdvisor({ open, prefill, onClose }: { open: boolean; prefi
   };
 
   const restart = () => {
+    moveFocus.current = true;
     setDirection(-1);
     setFreeText("");
     setAnswers({});
@@ -85,6 +99,7 @@ export function CourseAdvisor({ open, prefill, onClose }: { open: boolean; prefi
   const submitFreeText = (e: React.FormEvent) => {
     e.preventDefault();
     if (!freeText.trim()) return;
+    moveFocus.current = true;
     setDirection(1);
     setAnswers((a) => applyFreeText({ ...a, freeText: freeText.trim() }));
   };
@@ -170,7 +185,9 @@ export function CourseAdvisor({ open, prefill, onClose }: { open: boolean; prefi
               transition={{ type: "spring", stiffness: 420, damping: 38 }}
             >
               <fieldset>
-                <legend className="font-display text-lg font-semibold text-navy-900 sm:text-xl">{question.title}</legend>
+                <legend ref={focusOnMount} tabIndex={-1} className="font-display text-lg font-semibold text-navy-900 outline-none sm:text-xl">
+                  {question.title}
+                </legend>
                 {question.help && <p className="mt-1 text-[0.95rem] text-ink-muted">{question.help}</p>}
                 <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
                   {question.options.map((o, i) => (
@@ -225,6 +242,9 @@ export function CourseAdvisor({ open, prefill, onClose }: { open: boolean; prefi
 
           {done && data && (
             <motion.div key="results" custom={direction} variants={slide} initial="enter" animate="center" exit="exit" transition={{ type: "spring", stiffness: 380, damping: 36 }}>
+              <h3 ref={focusOnMount} tabIndex={-1} className="sr-only">
+                Your course recommendations
+              </h3>
               <Results answers={answers} catalogue={data} onClose={onClose} />
             </motion.div>
           )}
